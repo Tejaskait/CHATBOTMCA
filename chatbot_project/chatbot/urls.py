@@ -6,4 +6,5 @@ urlpatterns = [
     path("chat/", views.chat_view, name="chat_api"),       # POST endpoint for sending messages
     path("history/", views.history_list, name="history_list"),
     path("history/<str:session_id>/", views.history_detail, name="history_detail"),
+        path("history/<str:session_id>/delete/", views.history_delete, name="history_delete"),
 ]

@@ -142,3 +142,27 @@ def history_detail(request, session_id):
 
     session = doc["chat_history"][0]
     return JsonResponse({"history": session.get("messages", []), "created_at": session.get("created_at")})
+
+def history_delete(request, session_id):
+    """
+    Delete a session (session_id) from the current user's chat_history.
+    Expects POST. Returns JSON: {"deleted": True, "session_id": ...} or error.
+    """
+    user_id = request.session.get("user_id")
+    if not user_id:
+        return JsonResponse({"error": "no user_id in session"}, status=400)
+
+    if request.method != "POST":
+        return HttpResponseBadRequest("POST required")
+
+    # Remove the session object from the chat_history array
+    res = chat_collection.update_one(
+        {"user_id": user_id},
+        {"$pull": {"chat_history": {"session_id": session_id}}}
+    )
+
+    if res.modified_count > 0:
+        return JsonResponse({"deleted": True, "session_id": session_id})
+    else:
+        # nothing removed: session not found
+        return JsonResponse({"deleted": False, "error": "session not found"}, status=404)

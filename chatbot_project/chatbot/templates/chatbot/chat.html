@@ -5,19 +5,27 @@
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <title>Gemini Chatbot</title>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
     <style>
-        :root{
+        :root {
             --bg1: #0f2027;
             --bg2: #203a43;
             --bg3: #2c5364;
             --card: #1c1f26;
             --panel: #121417;
-            --accent: linear-gradient(90deg,#00c6ff,#0072ff);
+            --muted: #bcdbe9;
+            --accent-from: #00c6ff;
+            --accent-to: #0072ff;
+            --glass: rgba(255,255,255,0.03);
+            --soft-shadow: 0 10px 30px rgba(2,6,23,0.45);
         }
-        html,body{height:100%; margin:0; font-family: "Segoe UI", Roboto, Arial, sans-serif; color:#fff;}
-        body{
-            background: linear-gradient(135deg,var(--bg1),var(--bg2),var(--bg3));
-            display:flex; align-items:center; justify-content:center; padding:30px;
+
+        /* Reset / layout */
+        * { box-sizing: border-box; }
+        html, body { height: 100%; margin: 0; font-family: "Segoe UI", Roboto, Arial, sans-serif; color: #fff; }
+        body {
+            background: linear-gradient(135deg, var(--bg1), var(--bg2), var(--bg3));
+            display: flex; align-items: center; justify-content: center; padding: 30px;
         }
 
         .app {
@@ -29,81 +37,138 @@
             gap: 20px;
         }
 
-        /* Left sidebar */
+        /* Sidebar */
         .sidebar {
-            background: rgba(255,255,255,0.03);
+            background: var(--glass);
             border-radius: 14px;
             padding: 18px;
-            box-shadow: 0 8px 30px rgba(0,0,0,0.5);
+            box-shadow: var(--soft-shadow);
             display:flex; flex-direction:column;
         }
-        .sidebar h3{ margin:0 0 12px 0; font-size:1.05rem; color:#e6f7ff;}
-        .new-chat-btn{
+        .sidebar .title { margin: 0 0 12px 0; font-size: 1.05rem; color: #e6f7ff; }
+        .new-chat-btn {
             background: linear-gradient(90deg,#12c2e9,#c471ed);
-            border:none; padding:10px 12px; color:#fff; border-radius:10px; cursor:pointer; font-weight:600;
-            margin-bottom:12px;
+            border: none; padding: 10px 12px; color: #fff; border-radius: 10px; cursor: pointer; font-weight: 600;
+            margin-bottom: 12px;
         }
-        .sessions { overflow-y:auto; padding-right:6px; }
-        .session-item{
-            padding:10px; border-radius:10px; margin-bottom:8px; cursor:pointer; background:rgba(255,255,255,0.02);
-            transition: all .12s ease;
+        .sessions {
+            overflow-y: auto; padding-right: 6px; display: flex; flex-direction: column; gap: 8px;
         }
-        .session-item:hover{ transform: translateY(-2px); background: rgba(255,255,255,0.035);}
-        .session-title{ font-size:0.95rem; color:#dff6ff; margin-bottom:4px; }
-        .session-preview{ font-size:0.85rem; color:#bcdbe9; opacity:0.9; }
+
+        .session-item {
+            padding: 10px; border-radius: 10px; cursor: pointer;
+            background: rgba(255,255,255,0.02);
+            transition: transform .12s ease, background .12s ease;
+            display: flex; align-items: center; justify-content: space-between;
+        }
+        .session-item:hover { transform: translateY(-3px); background: rgba(255,255,255,0.035); }
+        .session-info { flex: 1; margin-right: 8px; min-width: 0; }
+        .session-title { font-size: 0.95rem; color: #dff6ff; margin-bottom: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .session-preview { font-size: 0.85rem; color: var(--muted); opacity: 0.95; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+        .session-actions { display:flex; gap:8px; align-items:center; }
+        .del-btn {
+            background: transparent;
+            border: none;
+            color: #ff7b7b;
+            cursor: pointer;
+            font-size: 1.05rem;
+            padding: 6px 8px;
+            border-radius: 6px;
+        }
+        .del-btn:hover { background: rgba(255,123,123,0.06); }
 
         /* Chat panel */
         .chat-panel {
             background: var(--card);
             border-radius: 16px;
-            display:flex; flex-direction:column;
-            overflow:hidden;
-            box-shadow: 0 12px 40px rgba(0,0,0,0.6);
+            display:flex; flex-direction:column; overflow:hidden;
+            box-shadow: var(--soft-shadow);
         }
-        .chat-header{
-            padding:16px; background: var(--panel); display:flex; align-items:center; justify-content:space-between;
+        .chat-header {
+            padding: 16px; background: var(--panel);
+            display:flex; align-items:center; justify-content:space-between;
+            gap: 12px;
         }
-        .chat-header h2{ margin:0; font-size:1.2rem; color:#e6f7ff; }
-        .chat-body{ flex:1; padding:18px; overflow-y:auto; background: linear-gradient(180deg, rgba(0,0,0,0.04), transparent); }
-        .chat-footer{ padding:14px; display:flex; gap:8px; border-top:1px solid rgba(255,255,255,0.03); background:var(--panel); }
+        .chat-header h2 { margin: 0; font-size: 1.2rem; color: #e6f7ff; }
+        #sessionMeta { font-size: 0.9rem; color: var(--muted); opacity: 0.95; }
 
-        /* bubbles */
-        .bubble { display:inline-block; padding:12px 14px; border-radius:14px; margin:8px 0; max-width:70%; line-height:1.3; }
-        .user { background: linear-gradient(90deg,#2b2f36,#242629); color:#fff; align-self:flex-end; border-bottom-right-radius:4px; }
-        .bot { background: linear-gradient(90deg,#0f1720,#081225); color:#e6f7ff; align-self:flex-start; border-bottom-left-radius:4px; }
+        .chat-body {
+            flex: 1; padding: 18px; overflow-y: auto;
+            background: linear-gradient(180deg, rgba(0,0,0,0.04), transparent);
+            display:flex; flex-direction: column; gap: 8px;
+            scroll-behavior: smooth;
+            position: relative;
+        }
+
+        .chat-footer {
+            padding: 14px; display:flex; gap:8px;
+            border-top:1px solid rgba(255,255,255,0.03); background: var(--panel);
+        }
+
+        /* Bubbles */
+        .bubble {
+            display:inline-block; padding: 12px 14px; border-radius: 14px;
+            margin: 8px 0; max-width: 70%; line-height: 1.3;
+            word-wrap: break-word;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.35);
+        }
+        .user { align-self: flex-end; background: linear-gradient(90deg,#2b2f36,#242629); color: #fff; border-bottom-right-radius: 4px; }
+        .bot  { align-self: flex-start; background: linear-gradient(90deg,#0f1720,#081225); color: #e6f7ff; border-bottom-left-radius: 4px; }
 
         .input-field { flex:1; padding:10px 12px; border-radius:10px; border:none; background:#121317; color:#fff; font-size:1rem; outline:none; }
-        .send-btn { background:var(--accent); border:none; color:#fff; padding:10px 16px; border-radius:10px; cursor:pointer; font-weight:700; }
+        .send-btn {
+            background: linear-gradient(90deg, var(--accent-from), var(--accent-to));
+            border:none; color:#fff; padding:10px 16px; border-radius:10px; cursor:pointer; font-weight:700;
+        }
+
+        /* load-more indicator */
+        .load-more {
+            position: sticky;
+            top: 6px;
+            align-self: center;
+            background: rgba(255,255,255,0.03);
+            padding: 6px 10px;
+            border-radius: 999px;
+            font-size: 0.85rem;
+            color: var(--muted);
+            display: none;
+            z-index: 5;
+            backdrop-filter: blur(6px);
+        }
 
         /* small responsive */
-        @media (max-width:960px){
+        @media (max-width: 960px) {
             .app { grid-template-columns: 1fr; height: 92vh; }
-            .sidebar { order:2; height:220px; overflow:auto; }
-            .chat-panel { order:1; height: calc(100% - 220px); }
+            .sidebar { order: 2; height: 220px; overflow: auto; }
+            .chat-panel { order: 1; height: calc(100% - 220px); }
         }
     </style>
 </head>
 <body>
     <div class="app" role="application">
-        <div class="sidebar">
-            <h3>Chat History</h3>
+        <aside class="sidebar" aria-label="Chat sessions">
+            <h3 class="title">Chat History</h3>
             <button class="new-chat-btn" id="newChatBtn">+ New Chat</button>
             <div class="sessions" id="sessionList" aria-live="polite"></div>
-        </div>
+        </aside>
 
-        <div class="chat-panel">
-            <div class="chat-header">
+        <main class="chat-panel" aria-live="polite">
+            <header class="chat-header">
                 <h2>💬 Gemini Chatbot</h2>
-                <div id="sessionMeta" style="font-size:0.9rem;color:#bcdbe9"></div>
-            </div>
+                <div id="sessionMeta">No session</div>
+            </header>
 
-            <div class="chat-body" id="chatbox" aria-live="polite"></div>
+            <section class="chat-body" id="chatbox" aria-live="polite">
+                <!-- Load-more indicator shown when older messages exist -->
+                <div id="loadMoreIndicator" class="load-more">↑ Scroll up to load earlier messages</div>
+            </section>
 
-            <div class="chat-footer">
+            <footer class="chat-footer">
                 <input id="message" class="input-field" type="text" placeholder="Type your message..." autocomplete="off" />
                 <button id="sendBtn" class="send-btn">Send</button>
-            </div>
-        </div>
+            </footer>
+        </main>
     </div>
 
 <script>
@@ -114,7 +179,6 @@
             const cookies = document.cookie.split(';');
             for (let i = 0; i < cookies.length; i++) {
                 const cookie = cookies[i].trim();
-                // Does this cookie string begin with the name we want?
                 if (cookie.substring(0, name.length + 1) === (name + '=')) {
                     cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
                     break;
@@ -124,23 +188,69 @@
         return cookieValue;
     }
     const csrftoken = getCookie('csrftoken');
-    $.ajaxSetup({
-        headers: { 'X-CSRFToken': csrftoken }
-    });
+    $.ajaxSetup({ headers: { 'X-CSRFToken': csrftoken } });
 
+    // state
     let currentSession = null;
+    let currentHistory = [];     // full array fetched from server: [{user,bot}, ...]
+    let renderedStart = 0;       // index in currentHistory where rendered content starts
+    const PAGE_SIZE = 12;        // how many message pairs load per batch when scrolling up
+    let isLoadingHistory = false;
 
+    // render a single session card (same logic and event hooks)
     function renderSessionItem(s) {
         const el = $(`
             <div class="session-item" data-session="${s.session_id}">
-                <div class="session-title">Session • ${s.session_id.slice(0,8)}</div>
-                <div class="session-preview">${s.preview || 'No messages yet'}</div>
+                <div class="session-info">
+                    <div class="session-title">Session • ${s.session_id.slice(0,8)}</div>
+                    <div class="session-preview">${s.preview || 'No messages yet'}</div>
+                </div>
+                <div class="session-actions">
+                    <button class="del-btn" title="Delete session">🗑</button>
+                </div>
             </div>
         `);
+
+        // clicking the whole card loads the session
         el.on('click', function(){ loadHistory(s.session_id); });
+
+        // delete button: stop propagation so click doesn't also open the session
+        el.find('.del-btn').on('click', function(e){
+            e.stopPropagation();
+            if (!confirm('Delete this session? This cannot be undone.')) return;
+            const btn = $(this);
+            btn.prop('disabled', true).text('...');
+            deleteSession(s.session_id, el, btn);
+        });
+
         return el;
     }
 
+    // delete via API (identical logic)
+    function deleteSession(sessionId, el, btn) {
+        $.ajax({
+            url: "/history/" + sessionId + "/delete/",
+            method: "POST",
+            success: function(data){
+                el.remove();
+                if (currentSession === sessionId) {
+                    currentSession = null;
+                    currentHistory = [];
+                    renderedStart = 0;
+                    $("#chatbox").empty();
+                    $("#sessionMeta").text("Deleted session");
+                    hideLoadIndicator();
+                }
+            },
+            error: function(xhr){
+                const msg = (xhr.responseJSON && xhr.responseJSON.error) ? xhr.responseJSON.error : (xhr.responseText || 'Server error');
+                alert("Could not delete session: " + msg);
+                if (btn) { btn.prop('disabled', false).text('🗑'); }
+            }
+        });
+    }
+
+    // fetch sessions and populate list (same endpoint)
     function loadSessions() {
         $.get("/history/", function(data){
             $("#sessionList").empty();
@@ -154,29 +264,95 @@
         });
     }
 
+    // show/hide load-more indicator
+    function showLoadIndicator() { $("#loadMoreIndicator").css("display", "inline-block"); }
+    function hideLoadIndicator() { $("#loadMoreIndicator").css("display", "none"); }
+
+    // helper to append messages (used for initial render & adding newer messages)
+    function appendRange(startIdx, endIdx) {
+        const $cb = $("#chatbox");
+        for (let i = startIdx; i < endIdx; i++) {
+            const m = currentHistory[i];
+            // user then bot
+            $cb.append(`<div class="bubble user" style="align-self:flex-end">${escapeHtml(m.user)}</div>`);
+            $cb.append(`<div class="bubble bot">${escapeHtml(m.bot)}</div>`);
+        }
+    }
+
+    // helper to prepend messages while keeping scroll position
+    function prependRange(startIdx, endIdx) {
+        // startIdx..endIdx-1 will be prepended
+        const cb = document.getElementById("chatbox");
+        const oldScrollHeight = cb.scrollHeight;
+        const oldScrollTop = cb.scrollTop;
+
+        // iterate backwards so chronological order is preserved
+        for (let i = endIdx - 1; i >= startIdx; i--) {
+            const m = currentHistory[i];
+            // prepend bot, then prepend user so each pair keeps correct order
+            $("#chatbox").prepend(`<div class="bubble bot">${escapeHtml(m.bot)}</div>`);
+            $("#chatbox").prepend(`<div class="bubble user" style="align-self:flex-end">${escapeHtml(m.user)}</div>`);
+        }
+
+        // adjust scrollTop so viewport stays at same message (smooth)
+        const newScrollHeight = cb.scrollHeight;
+        cb.scrollTop = newScrollHeight - oldScrollHeight + oldScrollTop;
+    }
+
+    // load history into the chat pane (enhanced with client-side paging)
     function loadHistory(sessionId) {
         currentSession = sessionId;
+        currentHistory = [];
+        renderedStart = 0;
         $("#chatbox").empty();
         $("#sessionMeta").text("Session: " + sessionId.slice(0,8));
+        hideLoadIndicator();
+
         $.get("/history/" + sessionId + "/", function(data){
-            if (!data.history || data.history.length === 0) {
+            currentHistory = data.history || [];
+            const total = currentHistory.length;
+
+            if (total === 0) {
                 $("#chatbox").append("<div style='opacity:.7'>No messages in this session</div>");
                 return;
             }
-            data.history.forEach(function(m){
-                $("#chatbox").append(`<div class="bubble user" style="align-self:flex-end">${escapeHtml(m.user)}</div>`);
-                $("#chatbox").append(`<div class="bubble bot">${escapeHtml(m.bot)}</div>`);
-            });
+
+            // decide where to start rendering so we show the last PAGE_SIZE message-pairs
+            const start = Math.max(0, total - PAGE_SIZE);
+            renderedStart = start;
+
+            // initial render: only append the latest PAGE_SIZE pairs
+            appendRange(start, total);
+            // if there are older messages, show the indicator
+            if (renderedStart > 0) showLoadIndicator(); else hideLoadIndicator();
+
+            // scroll to bottom (newest)
             scrollToBottom();
         });
     }
 
+    // when user scrolls up close to top, load previous page (if any)
+    $("#chatbox").on('scroll', function(){
+        const el = this;
+        if (el.scrollTop < 80 && renderedStart > 0 && !isLoadingHistory) {
+            // load previous batch
+            isLoadingHistory = true;
+            const prevStart = Math.max(0, renderedStart - PAGE_SIZE);
+            const prevEnd = renderedStart;
+
+            // prepend the older messages and update renderedStart
+            prependRange(prevStart, prevEnd);
+            renderedStart = prevStart;
+
+            if (renderedStart === 0) hideLoadIndicator();
+            isLoadingHistory = false;
+        }
+    });
+
+    // utility
     function escapeHtml(text) {
         if (text === null || text === undefined) return "";
-        return String(text)
-            .replace(/&/g, "&amp;")
-            .replace(/</g, "&lt;")
-            .replace(/>/g, "&gt;");
+        return String(text).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
     }
 
     function scrollToBottom(){
@@ -184,10 +360,12 @@
         cb.scrollTop = cb.scrollHeight;
     }
 
+    // sendMessage (unchanged logic, but keep client cache in sync)
     function sendMessage(){
         const message = $("#message").val().trim();
         if (!message) return;
-        // show user bubble immediately
+
+        // optimistic UI: show user bubble
         $("#chatbox").append(`<div class="bubble user">${escapeHtml(message)}</div>`);
         scrollToBottom();
 
@@ -201,15 +379,34 @@
             contentType: "application/json",
             data: JSON.stringify(payload),
             success: function(data){
-                // Update session (if new, data.session_id will be new)
+                // update session id if newly created
                 currentSession = data.session_id;
                 $("#sessionMeta").text("Session: " + currentSession.slice(0,8));
+
+                // append bot reply to DOM
                 $("#chatbox").append(`<div class="bubble bot">${escapeHtml(data.reply)}</div>`);
-                loadSessions(); // refresh left panel
                 scrollToBottom();
+
+                // keep client-side cache in sync (so scroll-up will include this conversation)
+                // push new record to history array
+                currentHistory.push({ user: message, bot: data.reply });
+
+                // if we've been only showing a window near the end, adjust renderedStart so
+                // newest messages remain visible. This doesn't change server logic.
+                if (currentHistory.length <= PAGE_SIZE) {
+                    // nothing to do, everything already rendered
+                    renderedStart = Math.max(0, currentHistory.length - PAGE_SIZE);
+                } else {
+                    // ensure rendered window includes newest: keep it near the end
+                    renderedStart = Math.max(0, currentHistory.length - PAGE_SIZE);
+                }
+
+                // refresh left sessions list (unchanged)
+                loadSessions();
             },
             error: function(xhr){
                 $("#chatbox").append(`<div class="bubble bot">Error: ${xhr.responseText || 'Server error'}</div>`);
+                scrollToBottom();
             },
             complete: function(){
                 $("#sendBtn").prop("disabled", false).text("Send");
@@ -217,11 +414,14 @@
         });
     }
 
-    // New chat button clears UI and sets session null so server creates a new session on next send
+    // new chat behavior (same)
     $("#newChatBtn").on('click', function(){
         currentSession = null;
+        currentHistory = [];
+        renderedStart = 0;
         $("#chatbox").empty();
         $("#sessionMeta").text("New session");
+        hideLoadIndicator();
         $("#message").focus();
     });
 
