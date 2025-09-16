@@ -1,119 +1,239 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Chatbot MCA</title>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Gemini Chatbot</title>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <style>
-        body {
-            font-family: "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
-            margin: 0;
-            padding: 0;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            color: #fff;
+        :root{
+            --bg1: #0f2027;
+            --bg2: #203a43;
+            --bg3: #2c5364;
+            --card: #1c1f26;
+            --panel: #121417;
+            --accent: linear-gradient(90deg,#00c6ff,#0072ff);
+        }
+        html,body{height:100%; margin:0; font-family: "Segoe UI", Roboto, Arial, sans-serif; color:#fff;}
+        body{
+            background: linear-gradient(135deg,var(--bg1),var(--bg2),var(--bg3));
+            display:flex; align-items:center; justify-content:center; padding:30px;
         }
 
-        .chat-container {
-            width: 400px;
-            max-width: 90%;
-            background: #1c1f26;
-            border-radius: 20px;
-            overflow: hidden;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.6);
-            display: flex;
-            flex-direction: column;
+        .app {
+            width: 1100px;
+            max-width: 96vw;
+            height: 80vh;
+            display: grid;
+            grid-template-columns: 320px 1fr;
+            gap: 20px;
         }
 
-        .chat-header {
-            background: linear-gradient(90deg, #00c6ff, #0072ff);
-            padding: 15px;
-            text-align: center;
-            font-size: 1.4rem;
-            font-weight: bold;
-            letter-spacing: 1px;
+        /* Left sidebar */
+        .sidebar {
+            background: rgba(255,255,255,0.03);
+            border-radius: 14px;
+            padding: 18px;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.5);
+            display:flex; flex-direction:column;
         }
-
-        #chatbox {
-            flex: 1;
-            padding: 15px;
-            overflow-y: auto;
-            background: #121417;
+        .sidebar h3{ margin:0 0 12px 0; font-size:1.05rem; color:#e6f7ff;}
+        .new-chat-btn{
+            background: linear-gradient(90deg,#12c2e9,#c471ed);
+            border:none; padding:10px 12px; color:#fff; border-radius:10px; cursor:pointer; font-weight:600;
+            margin-bottom:12px;
         }
-
-        #chatbox p {
-            margin: 10px 0;
-            line-height: 1.4em;
+        .sessions { overflow-y:auto; padding-right:6px; }
+        .session-item{
+            padding:10px; border-radius:10px; margin-bottom:8px; cursor:pointer; background:rgba(255,255,255,0.02);
+            transition: all .12s ease;
         }
+        .session-item:hover{ transform: translateY(-2px); background: rgba(255,255,255,0.035);}
+        .session-title{ font-size:0.95rem; color:#dff6ff; margin-bottom:4px; }
+        .session-preview{ font-size:0.85rem; color:#bcdbe9; opacity:0.9; }
 
-        #chatbox p b {
-            color: #00c6ff;
+        /* Chat panel */
+        .chat-panel {
+            background: var(--card);
+            border-radius: 16px;
+            display:flex; flex-direction:column;
+            overflow:hidden;
+            box-shadow: 0 12px 40px rgba(0,0,0,0.6);
         }
-
-        .chat-input {
-            display: flex;
-            border-top: 1px solid #333;
+        .chat-header{
+            padding:16px; background: var(--panel); display:flex; align-items:center; justify-content:space-between;
         }
+        .chat-header h2{ margin:0; font-size:1.2rem; color:#e6f7ff; }
+        .chat-body{ flex:1; padding:18px; overflow-y:auto; background: linear-gradient(180deg, rgba(0,0,0,0.04), transparent); }
+        .chat-footer{ padding:14px; display:flex; gap:8px; border-top:1px solid rgba(255,255,255,0.03); background:var(--panel); }
 
-        #message {
-            flex: 1;
-            padding: 12px;
-            border: none;
-            outline: none;
-            background: #1c1f26;
-            color: #fff;
-            font-size: 1rem;
-        }
+        /* bubbles */
+        .bubble { display:inline-block; padding:12px 14px; border-radius:14px; margin:8px 0; max-width:70%; line-height:1.3; }
+        .user { background: linear-gradient(90deg,#2b2f36,#242629); color:#fff; align-self:flex-end; border-bottom-right-radius:4px; }
+        .bot { background: linear-gradient(90deg,#0f1720,#081225); color:#e6f7ff; align-self:flex-start; border-bottom-left-radius:4px; }
 
-        button {
-            background: #00c6ff;
-            border: none;
-            padding: 12px 20px;
-            cursor: pointer;
-            color: #fff;
-            font-size: 1rem;
-            font-weight: bold;
-            transition: background 0.3s ease;
-            border-top-right-radius: 20px;
-        }
+        .input-field { flex:1; padding:10px 12px; border-radius:10px; border:none; background:#121317; color:#fff; font-size:1rem; outline:none; }
+        .send-btn { background:var(--accent); border:none; color:#fff; padding:10px 16px; border-radius:10px; cursor:pointer; font-weight:700; }
 
-        button:hover {
-            background: #0072ff;
-        }
-
-        /* Smooth scroll for chat */
-        #chatbox {
-            scroll-behavior: smooth;
+        /* small responsive */
+        @media (max-width:960px){
+            .app { grid-template-columns: 1fr; height: 92vh; }
+            .sidebar { order:2; height:220px; overflow:auto; }
+            .chat-panel { order:1; height: calc(100% - 220px); }
         }
     </style>
 </head>
 <body>
-    <div class="chat-container">
-        <div class="chat-header"> Chatbot MCA</div>
-        <div id="chatbox"></div>
-        <div class="chat-input">
-            <input type="text" id="message" placeholder="Type your message">
-            <button onclick="sendMessage()">Send</button>
+    <div class="app" role="application">
+        <div class="sidebar">
+            <h3>Chat History</h3>
+            <button class="new-chat-btn" id="newChatBtn">+ New Chat</button>
+            <div class="sessions" id="sessionList" aria-live="polite"></div>
+        </div>
+
+        <div class="chat-panel">
+            <div class="chat-header">
+                <h2>💬 Gemini Chatbot</h2>
+                <div id="sessionMeta" style="font-size:0.9rem;color:#bcdbe9"></div>
+            </div>
+
+            <div class="chat-body" id="chatbox" aria-live="polite"></div>
+
+            <div class="chat-footer">
+                <input id="message" class="input-field" type="text" placeholder="Type your message..." autocomplete="off" />
+                <button id="sendBtn" class="send-btn">Send</button>
+            </div>
         </div>
     </div>
 
-    <script>
-        function sendMessage() {
-            var message = $("#message").val();
-            $("#chatbox").append("<p><b>You:</b> " + message + "</p>");
-
-            $.post("", {message: message, csrfmiddlewaretoken: '{{ csrf_token }}'}, function(data) {
-                $("#chatbox").append("<p><b>Bot:</b> " + data.reply + "</p>");
-                var chatbox = document.getElementById("chatbox");
-                chatbox.scrollTop = chatbox.scrollHeight; // auto-scroll to latest
-            });
-
-            $("#message").val("");
+<script>
+    // CSRF helpers (Django)
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                // Does this cookie string begin with the name we want?
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
         }
-    </script>
+        return cookieValue;
+    }
+    const csrftoken = getCookie('csrftoken');
+    $.ajaxSetup({
+        headers: { 'X-CSRFToken': csrftoken }
+    });
+
+    let currentSession = null;
+
+    function renderSessionItem(s) {
+        const el = $(`
+            <div class="session-item" data-session="${s.session_id}">
+                <div class="session-title">Session • ${s.session_id.slice(0,8)}</div>
+                <div class="session-preview">${s.preview || 'No messages yet'}</div>
+            </div>
+        `);
+        el.on('click', function(){ loadHistory(s.session_id); });
+        return el;
+    }
+
+    function loadSessions() {
+        $.get("/history/", function(data){
+            $("#sessionList").empty();
+            if (!data.sessions || data.sessions.length === 0) {
+                $("#sessionList").append("<div style='opacity:.8'>No sessions yet — start a new chat.</div>");
+                return;
+            }
+            data.sessions.forEach(function(s){
+                $("#sessionList").append(renderSessionItem(s));
+            });
+        });
+    }
+
+    function loadHistory(sessionId) {
+        currentSession = sessionId;
+        $("#chatbox").empty();
+        $("#sessionMeta").text("Session: " + sessionId.slice(0,8));
+        $.get("/history/" + sessionId + "/", function(data){
+            if (!data.history || data.history.length === 0) {
+                $("#chatbox").append("<div style='opacity:.7'>No messages in this session</div>");
+                return;
+            }
+            data.history.forEach(function(m){
+                $("#chatbox").append(`<div class="bubble user" style="align-self:flex-end">${escapeHtml(m.user)}</div>`);
+                $("#chatbox").append(`<div class="bubble bot">${escapeHtml(m.bot)}</div>`);
+            });
+            scrollToBottom();
+        });
+    }
+
+    function escapeHtml(text) {
+        if (text === null || text === undefined) return "";
+        return String(text)
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;");
+    }
+
+    function scrollToBottom(){
+        const cb = document.getElementById("chatbox");
+        cb.scrollTop = cb.scrollHeight;
+    }
+
+    function sendMessage(){
+        const message = $("#message").val().trim();
+        if (!message) return;
+        // show user bubble immediately
+        $("#chatbox").append(`<div class="bubble user">${escapeHtml(message)}</div>`);
+        scrollToBottom();
+
+        $("#message").val("");
+        $("#sendBtn").prop("disabled", true).text("Sending...");
+
+        const payload = { message: message, session_id: currentSession };
+        $.ajax({
+            url: "/chat/",
+            method: "POST",
+            contentType: "application/json",
+            data: JSON.stringify(payload),
+            success: function(data){
+                // Update session (if new, data.session_id will be new)
+                currentSession = data.session_id;
+                $("#sessionMeta").text("Session: " + currentSession.slice(0,8));
+                $("#chatbox").append(`<div class="bubble bot">${escapeHtml(data.reply)}</div>`);
+                loadSessions(); // refresh left panel
+                scrollToBottom();
+            },
+            error: function(xhr){
+                $("#chatbox").append(`<div class="bubble bot">Error: ${xhr.responseText || 'Server error'}</div>`);
+            },
+            complete: function(){
+                $("#sendBtn").prop("disabled", false).text("Send");
+            }
+        });
+    }
+
+    // New chat button clears UI and sets session null so server creates a new session on next send
+    $("#newChatBtn").on('click', function(){
+        currentSession = null;
+        $("#chatbox").empty();
+        $("#sessionMeta").text("New session");
+        $("#message").focus();
+    });
+
+    $("#sendBtn").on('click', sendMessage);
+    $("#message").on('keydown', function(e){
+        if (e.key === "Enter") sendMessage();
+    });
+
+    // initial load
+    $(document).ready(function(){
+        loadSessions();
+    });
+</script>
 </body>
 </html>

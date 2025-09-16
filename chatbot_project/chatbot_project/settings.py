@@ -11,11 +11,18 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
 from pathlib import Path
-
+from pymongo import MongoClient
 import os
 from dotenv import load_dotenv
 
 load_dotenv()
+
+MONGODB_URI = os.getenv("MONGODB_URI")
+MONGODB_DB = os.getenv("MONGODB_DB", "chatbot_db")
+
+# Create client and attach to Django settings
+MONGO_CLIENT = MongoClient(MONGODB_URI)
+MONGO_DB = MONGO_CLIENT[MONGODB_DB]
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
